@@ -1,21 +1,24 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-const dbConfig = require('./config/database.config.js');
+const { ApolloServer } = require('apollo-server-express');
 const mongoose = require('mongoose');
-const router = require('./router/router')
+const typeDefs = require('./graphql/schema');
+const resolvers = require('./graphql/resolvers');
 
-app.use(bodyParser.json())
-mongoose.Promise = global.Promise;
-mongoose.connect(dbConfig.url, {
-    useNewUrlParser: true
-}).then(() => {
-    console.log("Databse Connected Successfully!!");
-}).catch(err => {
-    console.log('Could not connect to the database', err);
-    process.exit();
-});
-app.use(router)
-app.listen(3000, () => {
-    console.log("Server is listening on port 3000");
-});
+const startServer = async () => {
+    const app = express();
+
+    const server = new ApolloServer({ typeDefs, resolvers });
+    await server.start();
+    server.applyMiddleware({ app });
+
+    await mongoose.connect('mongodb://localhost:27017', {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    });
+
+    app.listen({ port: 4000 }, () =>
+        console.log(`Server ready at http://localhost:4000${server.graphqlPath}`)
+    );
+};
+
+startServer();
